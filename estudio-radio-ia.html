@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estudio de Radio IA — OpenRouter</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:#f5f4f0;--surface:#ffffff;--surface2:#f9f8f5;
+    --border:rgba(0,0,0,0.10);--border-strong:rgba(0,0,0,0.18);
+    --text:#1a1a18;--text2:#5a5a56;--text3:#9a9a94;
+    --accent:#185fa5;--accent-bg:#e6f1fb;--accent-border:#b5d4f4;
+    --danger:#a32d2d;--danger-bg:#fcebeb;--danger-border:#f7c1c1;
+    --success:#3b6d11;--success-bg:#eaf3de;--success-border:#c0dd97;
+    --warning:#854f0b;--warning-bg:#faeeda;--warning-border:#fac775;
+    --radius:8px;--shadow:0 1px 4px rgba(0,0,0,0.08),0 0 0 0.5px rgba(0,0,0,0.08);
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#1c1c1a;--surface:#2c2c2a;--surface2:#242422;
+    --border:rgba(255,255,255,0.10);--border-strong:rgba(255,255,255,0.18);
+    --text:#f0efe8;--text2:#a8a8a0;--text3:#686860;
+    --accent:#85b7eb;--accent-bg:#0c2a44;--accent-border:#185fa5;
+    --danger:#f09595;--danger-bg:#3a1010;--danger-border:#a32d2d;
+    --success:#97c459;--success-bg:#1a2e08;--success-border:#3b6d11;
+    --warning:#ef9f27;--warning-bg:#2e1e04;--warning-border:#854f0b;
+  }}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:2rem 1rem;}
+  .app{width:100%;max-width:640px;}
+  .app-header{display:flex;align-items:center;gap:14px;margin-bottom:1.5rem;}
+  .logo{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:26px;flex-shrink:0;box-shadow:var(--shadow);}
+  .app-title{font-size:20px;font-weight:600;}
+  .app-sub{font-size:13px;color:var(--text2);margin-top:2px;}
+  .badge-or{display:inline-flex;align-items:center;background:#f3f0ff;color:#6366f1;border:0.5px solid #c4b5fd;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:600;margin-left:6px;}
+  .badge-free{display:inline-flex;align-items:center;background:var(--success-bg);color:var(--success);border:0.5px solid var(--success-border);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;}
+  .card{background:var(--surface);border-radius:12px;border:0.5px solid var(--border);box-shadow:var(--shadow);padding:1.25rem;margin-bottom:1rem;}
+  .card-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .api-row{display:flex;gap:8px;align-items:center;}
+  .api-row input[type="password"],.api-row input[type="text"]{flex:1;padding:9px 12px;font-size:13px;border:0.5px solid var(--border-strong);border-radius:var(--radius);background:var(--surface2);color:var(--text);outline:none;font-family:monospace;}
+  .api-row input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg);}
+  .toggle-btn{padding:9px 11px;border:0.5px solid var(--border-strong);border-radius:var(--radius);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:14px;}
+  .toggle-btn:hover{background:var(--bg);}
+  .api-hint{font-size:12px;color:var(--text3);margin-top:6px;}
+  .api-hint a{color:var(--accent);text-decoration:none;}
+  .api-hint a:hover{text-decoration:underline;}
+  .model-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0;}
+  .model-btn{padding:8px 10px;font-size:12px;font-weight:500;border:0.5px solid var(--border-strong);border-radius:var(--radius);background:var(--surface2);color:var(--text2);cursor:pointer;transition:all 0.15s;text-align:left;line-height:1.4;}
+  .model-btn .mname{display:block;font-weight:600;font-size:13px;}
+  .model-btn .mdesc{display:block;font-size:11px;color:var(--text3);margin-top:2px;}
+  .model-btn.active{background:var(--accent-bg);border-color:var(--accent-border);color:var(--accent);}
+  .model-btn.active .mdesc{color:var(--accent);}
+  .model-btn:hover:not(.active){background:var(--bg);}
+  .dur-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+  .dur-btn{padding:8px 4px;font-size:12px;font-weight:500;border:0.5px solid var(--border-strong);border-radius:var(--radius);background:var(--surface2);color:var(--text2);cursor:pointer;transition:all 0.15s;text-align:center;}
+  .dur-btn.active{background:var(--accent-bg);border-color:var(--accent-border);color:var(--accent);}
+  .dur-btn:hover:not(.active){background:var(--bg);}
+  .status-bar{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface2);border-radius:var(--radius);border:0.5px solid var(--border);margin-bottom:1rem;min-height:42px;}
+  .status-dot{width:8px;height:8px;border-radius:50%;background:var(--border-strong);flex-shrink:0;transition:background 0.3s;}
+  .status-dot.ready{background:#639922;}
+  .status-dot.recording{background:#e24b4a;animation:blink 1s step-end infinite;}
+  .status-dot.processing{background:#ba7517;}
+  @keyframes blink{50%{opacity:0.2}}
+  #statusText{font-size:13px;color:var(--text2);flex:1;}
+  .consigna-textarea{width:100%;padding:10px 12px;font-size:14px;border:0.5px solid var(--border-strong);border-radius:var(--radius);background:var(--surface2);color:var(--text);outline:none;font-family:inherit;resize:vertical;min-height:90px;line-height:1.6;}
+  .consigna-textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg);}
+  .gen-btn{width:100%;margin-top:10px;padding:12px;font-size:14px;font-weight:500;border:0.5px solid var(--accent-border);border-radius:var(--radius);background:var(--accent-bg);color:var(--accent);cursor:pointer;transition:all 0.15s;}
+  .gen-btn:hover{opacity:0.85;}
+  .gen-btn:active{transform:scale(0.98);}
+  .gen-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+  .error-box{background:var(--danger-bg);border:0.5px solid var(--danger-border);border-radius:var(--radius);padding:10px 14px;font-size:13px;color:var(--danger);margin-bottom:1rem;display:none;line-height:1.6;}
+  .error-box.visible{display:block;}
+  .locucion-panel{display:none;}
+  .locucion-panel.visible{display:block;}
+  .info-box{background:var(--accent-bg);border:0.5px solid var(--accent-border);border-radius:var(--radius);padding:10px 14px;font-size:13px;color:var(--accent);margin-bottom:1rem;line-height:1.6;}
+  .script-display{background:var(--surface2);border:0.5px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1rem;}
+  .script-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--text3);margin-bottom:10px;}
+  .script-text{font-size:18px;line-height:2;color:var(--text);font-family:Georgia,serif;white-space:pre-wrap;}
+  .mic-control{background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1rem;text-align:center;}
+  .mic-big{width:96px;height:96px;border-radius:50%;border:2.5px solid var(--border-strong);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:36px;display:inline-flex;align-items:center;justify-content:center;transition:all 0.2s;box-shadow:var(--shadow);user-select:none;-webkit-user-select:none;}
+  .mic-big:hover{transform:scale(1.04);}
+  .mic-big.recording{background:var(--danger-bg);border-color:var(--danger-border);color:var(--danger);animation:pulse 1s ease-in-out infinite;}
+  .mic-big.done{background:var(--success-bg);border-color:var(--success-border);color:var(--success);}
+  @keyframes pulse{0%,100%{box-shadow:var(--shadow)}50%{box-shadow:0 0 0 12px rgba(226,75,74,0.12),var(--shadow)}}
+  .mic-big:disabled{opacity:0.4;cursor:not-allowed;}
+  .mic-status-text{font-size:14px;color:var(--text2);margin-top:10px;font-weight:500;}
+  .mic-hint-small{font-size:12px;color:var(--text3);margin-top:4px;}
+  .vu-wrap{display:flex;align-items:flex-end;justify-content:center;gap:2px;height:36px;margin:10px auto 0;width:120px;}
+  .vu-bar{width:6px;background:var(--border-strong);border-radius:3px;min-height:3px;}
+  .rec-timer{font-size:28px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--danger);margin-top:8px;display:none;}
+  .rec-timer.visible{display:block;}
+  .action-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .action-grid.triple{grid-template-columns:1fr 1fr 1fr;}
+  .act-btn{padding:10px 12px;font-size:13px;font-weight:500;border:0.5px solid var(--border-strong);border-radius:var(--radius);background:var(--surface2);color:var(--text2);cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:6px;}
+  .act-btn:hover{background:var(--bg);}
+  .act-btn:active{transform:scale(0.98);}
+  .act-btn.primary{background:var(--accent-bg);border-color:var(--accent-border);color:var(--accent);}
+  .act-btn.download{background:var(--success-bg);border-color:var(--success-border);color:var(--success);}
+  .act-btn.danger{background:var(--danger-bg);border-color:var(--danger-border);color:var(--danger);}
+  .act-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+  .audio-preview{margin-top:10px;display:none;}
+  .audio-preview.visible{display:block;}
+  .audio-preview audio{width:100%;border-radius:var(--radius);}
+  footer{margin-top:2rem;font-size:12px;color:var(--text3);text-align:center;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="app-header">
+    <div class="logo">🎙️</div>
+    <div>
+      <div class="app-title">Estudio de Radio IA <span class="badge-or">✦ OpenRouter</span></div>
+      <div class="app-sub">Gemini escribe el anuncio · Tú lo lees · Tu voz se descarga</div>
+    </div>
+  </div>
+
+  <!-- API Key -->
+  <div class="card">
+    <div class="card-label">🔑 API Key de OpenRouter <span class="badge-free">✓ Gratis · Sin tarjeta</span></div>
+    <div class="api-row">
+      <input type="password" id="apiKey" placeholder="sk-or-v1-..." autocomplete="off"/>
+      <button class="toggle-btn" onclick="toggleKey()">👁</button>
+    </div>
+    <p class="api-hint">
+      Obtén tu clave gratis en <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a>
+      · Inicia sesión con Gmail · Sin tarjeta
+    </p>
+  </div>
+
+  <!-- Modelo y configuración -->
+  <div class="card">
+    <div class="card-label">🤖 Modelo de IA</div>
+    <div class="model-grid" style="margin-bottom:12px;">
+      <button class="model-btn active" data-model="meta-llama/llama-3.3-70b-instruct:free" onclick="setModel(this)">
+        <span class="mname">LLaMA 3.3 70B</span>
+        <span class="mdesc">Meta · Recomendado · Gratis</span>
+      </button>
+      <button class="model-btn" data-model="google/gemma-3-27b-it:free" onclick="setModel(this)">
+        <span class="mname">Gemma 3 27B</span>
+        <span class="mdesc">Google · Muy bueno · Gratis</span>
+      </button>
+      <button class="model-btn" data-model="mistralai/mistral-7b-instruct" onclick="setModel(this)">
+        <span class="mname">Mistral 7B</span>
+        <span class="mdesc">Mistral AI · Rápido · Gratis</span>
+      </button>
+      <button class="model-btn" data-model="deepseek/deepseek-r1" onclick="setModel(this)">
+        <span class="mname">DeepSeek R1</span>
+        <span class="mdesc">DeepSeek · Potente · Gratis</span>
+      </button>
+    </div>
+    <div class="card-label" style="margin-bottom:8px;">⏱ Duración del anuncio</div>
+    <div class="dur-grid">
+      <button class="dur-btn active" data-sec="15" onclick="setDur(this)">15 seg</button>
+      <button class="dur-btn" data-sec="30" onclick="setDur(this)">30 seg</button>
+      <button class="dur-btn" data-sec="45" onclick="setDur(this)">45 seg</button>
+      <button class="dur-btn" data-sec="60" onclick="setDur(this)">60 seg</button>
+    </div>
+  </div>
+
+  <!-- Estado -->
+  <div class="status-bar">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">Ingresa tu API Key y escribe la consigna del anuncio</span>
+  </div>
+
+  <!-- Error -->
+  <div class="error-box" id="errorBox"></div>
+
+  <!-- PASO 1: Consigna -->
+  <div class="card" id="step1">
+    <div class="card-label">📝 Paso 1 — Escribe tu consigna</div>
+    <textarea class="consigna-textarea" id="consignaText"
+      placeholder="Ejemplo: Anuncio de 30 segundos para mi farmacia en San Francisco de Macorís, 15% de descuento en medicamentos genéricos toda esta semana, dirigido a familias..."></textarea>
+    <button class="gen-btn" id="genBtn" onclick="generateAd()">✦ Generar anuncio</button>
+  </div>
+
+  <!-- PASO 2: Leer y grabar con tu voz -->
+  <div class="locucion-panel" id="step2">
+
+    <div class="info-box">
+      🎙️ <strong>Paso 2 — Lee el anuncio en voz alta.</strong> Presiona el micrófono, lee el texto con voz de locutor y detén la grabación. Puedes repetir hasta quedar satisfecho.
+    </div>
+
+    <!-- Texto del anuncio -->
+    <div class="script-display">
+      <div class="script-label">📻 Texto del anuncio — léelo en voz alta</div>
+      <div class="script-text" id="scriptText"></div>
+    </div>
+
+    <!-- Control de grabación -->
+    <div class="mic-control">
+      <button class="mic-big" id="micBig" onclick="toggleRecording()">🎙️</button>
+      <div class="vu-wrap" id="vuWrap">
+        <div class="vu-bar" id="b1"></div><div class="vu-bar" id="b2"></div>
+        <div class="vu-bar" id="b3"></div><div class="vu-bar" id="b4"></div>
+        <div class="vu-bar" id="b5"></div><div class="vu-bar" id="b6"></div>
+        <div class="vu-bar" id="b7"></div><div class="vu-bar" id="b8"></div>
+        <div class="vu-bar" id="b9"></div>
+      </div>
+      <div class="rec-timer" id="recTimer">0:00</div>
+      <div class="mic-status-text" id="micStatusText">Presiona el micrófono para empezar a grabar</div>
+      <div class="mic-hint-small">El navegador pedirá permiso de micrófono — haz clic en Permitir</div>
+    </div>
+
+    <!-- Preview y descarga -->
+    <div class="audio-preview" id="audioPreview">
+      <div class="card-label" style="margin-bottom:8px;">🎧 Tu locución</div>
+      <audio id="audioPlayer" controls style="width:100%;border-radius:var(--radius);"></audio>
+      <div class="action-grid triple" style="margin-top:10px;">
+        <button class="act-btn download" onclick="downloadAudio()">⬇ Descargar audio</button>
+        <button class="act-btn danger" onclick="retakeRecording()">🔄 Repetir locución</button>
+        <button class="act-btn" onclick="resetAll()">✏️ Nueva consigna</button>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:8px;">
+      <button class="act-btn" onclick="resetAll()" style="display:inline-flex;margin:0 auto;">✏️ Cambiar consigna</button>
+    </div>
+
+  </div>
+
+</div>
+<footer>Estudio de Radio IA · Lic. Joel A. Ceballo Ariza, CPA<br>Tu voz se graba localmente · Sin conexión para el audio · OpenRouter gratis</footer>
+
+<script>
+let selectedDur = 15;
+let selectedModel = 'meta-llama/llama-3.3-70b-instruct';
+let generatedAd = '';
+let mediaRecorder = null;
+let audioChunks = [];
+let audioStream = null;
+let analyser = null;
+let animFrame = null;
+let timerInterval = null;
+let recSeconds = 0;
+let recordedBlob = null;
+let isRecording = false;
+
+function setStatus(s, m) {
+  document.getElementById('statusDot').className = 'status-dot ' + (s || '');
+  document.getElementById('statusText').textContent = m;
+}
+function showError(m) {
+  const b = document.getElementById('errorBox');
+  b.innerHTML = m; b.classList.add('visible');
+  setTimeout(() => b.classList.remove('visible'), 10000);
+}
+function setDur(btn) {
+  document.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedDur = parseInt(btn.dataset.sec);
+}
+function setModel(btn) {
+  document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedModel = btn.dataset.model;
+}
+function toggleKey() {
+  const i = document.getElementById('apiKey');
+  i.type = i.type === 'password' ? 'text' : 'password';
+}
+
+// ── GENERAR CON OPENROUTER ────────────────────────────────
+async function generateAd() {
+  const key = document.getElementById('apiKey').value.trim();
+  const consigna = document.getElementById('consignaText').value.trim();
+  if (!key) { showError('Ingresa tu API Key de OpenRouter primero. Empieza con <b>sk-or-</b>'); return; }
+  if (!key.startsWith('sk-or-')) { showError('La API Key de OpenRouter debe empezar con <b>sk-or-</b>. Verifica que la copiaste correctamente.'); return; }
+  if (!consigna) { showError('Escribe la consigna del anuncio antes de generar.'); return; }
+
+  setStatus('processing', 'Generando tu anuncio...');
+  document.getElementById('genBtn').disabled = true;
+  document.getElementById('genBtn').textContent = '⏳ Generando...';
+
+  const words = Math.round(selectedDur * 2.5);
+  const prompt = `Eres un redactor publicitario de radio especializado en anuncios para empresas dominicanas.
+
+El cliente te da esta consigna: "${consigna}"
+
+Escribe un anuncio de radio de ${selectedDur} segundos (aproximadamente ${words} palabras).
+
+REGLAS ESTRICTAS:
+- Escríbelo en español dominicano natural y conversacional
+- Debe sonar exactamente como lo diría un locutor de radio profesional
+- Incluye: gancho inicial fuerte → mensaje central → llamado a la acción claro
+- Tono apropiado al tipo de negocio o producto
+- NO incluyas etiquetas: [MÚSICA], [EFECTOS], [PAUSA], etc.
+- NO incluyas notas, título ni número de palabras
+- Responde ÚNICAMENTE con el texto del anuncio, listo para ser leído en voz alta`;
+
+  try {
+    const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + key,
+        'HTTP-Referer': 'https://estudio-radio-ia.local',
+        'X-Title': 'Estudio de Radio IA'
+      },
+      body: JSON.stringify({
+        model: selectedModel,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.85,
+        max_tokens: 600
+      })
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      const msg = err.error?.message || 'HTTP ' + resp.status;
+      if (resp.status === 401) throw new Error('API Key inválida. Verifica que empiece con sk-or- y que la copiaste completa.');
+      if (resp.status === 429) throw new Error('Límite de solicitudes alcanzado. Espera un momento e intenta de nuevo.');
+      throw new Error(msg);
+    }
+
+    const data = await resp.json();
+    let ad = data.choices?.[0]?.message?.content?.trim();
+    if (!ad) throw new Error('No se recibió respuesta. Intenta con otro modelo.');
+
+    // Limpiar posibles etiquetas o prefijos que el modelo añada
+    ad = ad.replace(/^(anuncio[:\-\s]*|texto[:\-\s]*|locuci[oó]n[:\-\s]*)/i, '').trim();
+
+    generatedAd = ad;
+    showLocucionPanel(ad);
+    setStatus('ready', 'Anuncio listo — léelo en voz alta y graba tu locución');
+
+  } catch (err) {
+    showError('❌ Error: ' + err.message);
+    setStatus('', 'Intenta de nuevo');
+  } finally {
+    document.getElementById('genBtn').disabled = false;
+    document.getElementById('genBtn').textContent = '✦ Generar anuncio';
+  }
+}
+
+// ── MOSTRAR PANEL DE LOCUCIÓN ────────────────────────────
+function showLocucionPanel(text) {
+  document.getElementById('step2').classList.add('visible');
+  document.getElementById('step1').style.opacity = '0.5';
+  document.getElementById('step1').style.pointerEvents = 'none';
+  document.getElementById('scriptText').textContent = text;
+  document.getElementById('audioPreview').classList.remove('visible');
+  document.getElementById('micBig').className = 'mic-big';
+  document.getElementById('micBig').innerHTML = '🎙️';
+  document.getElementById('micBig').disabled = false;
+  document.getElementById('micStatusText').textContent = 'Presiona el micrófono para empezar a grabar';
+  document.getElementById('recTimer').classList.remove('visible');
+}
+
+// ── GRABAR ────────────────────────────────────────────────
+async function toggleRecording() {
+  if (isRecording) stopRecording();
+  else await startRecording();
+}
+
+async function startRecording() {
+  try {
+    audioStream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: false, noiseSuppression: false, sampleRate: 44100 }
+    });
+  } catch (e) {
+    showError('❌ No se pudo acceder al micrófono: ' + e.message + '<br>Haz clic en el candado de la barra de dirección y permite el micrófono.');
+    return;
+  }
+
+  // VU Meter
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  const audioCtx = new AudioCtx();
+  const source = audioCtx.createMediaStreamSource(audioStream);
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 256;
+  source.connect(analyser);
+  drawVU();
+
+  // MediaRecorder
+  const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+    ? 'audio/webm;codecs=opus'
+    : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg;codecs=opus';
+
+  audioChunks = [];
+  mediaRecorder = new MediaRecorder(audioStream, { mimeType, audioBitsPerSecond: 128000 });
+  mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+  mediaRecorder.onstop = onRecordingStop;
+  mediaRecorder.start(200);
+
+  isRecording = true;
+  recSeconds = 0;
+  document.getElementById('micBig').className = 'mic-big recording';
+  document.getElementById('micBig').innerHTML = '⏹';
+  document.getElementById('micStatusText').textContent = 'Grabando... presiona ⏹ para detener';
+  document.getElementById('recTimer').classList.add('visible');
+  document.getElementById('audioPreview').classList.remove('visible');
+  setStatus('recording', 'Grabando tu locución...');
+
+  timerInterval = setInterval(() => {
+    recSeconds++;
+    const m = Math.floor(recSeconds / 60);
+    const s = recSeconds % 60;
+    document.getElementById('recTimer').textContent = m + ':' + String(s).padStart(2, '0');
+  }, 1000);
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+  if (audioStream) audioStream.getTracks().forEach(t => t.stop());
+  clearInterval(timerInterval);
+  cancelAnimationFrame(animFrame);
+  isRecording = false;
+
+  document.getElementById('micBig').className = 'mic-big done';
+  document.getElementById('micBig').innerHTML = '✓';
+  document.getElementById('micBig').disabled = true;
+  document.getElementById('micStatusText').textContent = 'Locución grabada — escúchala abajo';
+  document.getElementById('recTimer').classList.remove('visible');
+  setStatus('ready', 'Grabación lista — escúchala y descárgala');
+
+  for (let i = 1; i <= 9; i++) {
+    const b = document.getElementById('b' + i);
+    if (b) { b.style.height = '3px'; b.style.background = 'var(--border-strong)'; }
+  }
+}
+
+function onRecordingStop() {
+  recordedBlob = new Blob(audioChunks, { type: audioChunks[0]?.type || 'audio/webm' });
+  const url = URL.createObjectURL(recordedBlob);
+  document.getElementById('audioPlayer').src = url;
+  document.getElementById('audioPreview').classList.add('visible');
+}
+
+function drawVU() {
+  if (!analyser) return;
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(data);
+  for (let i = 1; i <= 9; i++) {
+    const val = data[i * Math.floor(data.length / 18)] / 255;
+    const h = Math.max(3, Math.round(val * 32));
+    const b = document.getElementById('b' + i);
+    if (b) {
+      b.style.height = h + 'px';
+      b.style.background = val > 0.7 ? '#e24b4a' : val > 0.4 ? '#ba7517' : '#639922';
+    }
+  }
+  animFrame = requestAnimationFrame(drawVU);
+}
+
+function downloadAudio() {
+  if (!recordedBlob) return;
+  const ext = recordedBlob.type.includes('webm') ? 'webm' : 'ogg';
+  const name = 'locucion-radio-' + selectedDur + 'seg-' + Date.now() + '.' + ext;
+  const url = URL.createObjectURL(recordedBlob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  setStatus('ready', '✅ Audio descargado: ' + name);
+}
+
+function retakeRecording() {
+  recordedBlob = null; audioChunks = [];
+  document.getElementById('audioPreview').classList.remove('visible');
+  document.getElementById('audioPlayer').src = '';
+  document.getElementById('micBig').className = 'mic-big';
+  document.getElementById('micBig').innerHTML = '🎙️';
+  document.getElementById('micBig').disabled = false;
+  document.getElementById('micStatusText').textContent = 'Presiona el micrófono para grabar de nuevo';
+  document.getElementById('recTimer').classList.remove('visible');
+  setStatus('ready', 'Listo para grabar de nuevo');
+}
+
+function resetAll() {
+  retakeRecording();
+  generatedAd = '';
+  document.getElementById('step2').classList.remove('visible');
+  document.getElementById('step1').style.opacity = '';
+  document.getElementById('step1').style.pointerEvents = '';
+  document.getElementById('consignaText').value = '';
+  document.getElementById('scriptText').textContent = '';
+  setStatus('', 'Listo para generar un nuevo anuncio');
+}
+</script>
+</body>
+</html>
